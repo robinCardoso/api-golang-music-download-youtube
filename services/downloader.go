@@ -30,22 +30,13 @@ func DownloadVideo(link, format, output, taskID string) error {
 		return fmt.Errorf("failed to get stdout pipe: %w", err)
 	}
 
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return fmt.Errorf("failed to get stderr pipe: %w", err)
-	}
-
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start command: %w", err)
 	}
 
 	go handleOutput(stdout, taskID)
-	go logErrors(stderr)
 
-	if err := cmd.Wait(); err != nil {
-		return fmt.Errorf("yt-dlp failed: %w", err)
-	}
-	return nil
+	return cmd.Wait()
 }
 
 func validateCookies() error {
@@ -98,14 +89,15 @@ func handleOutput(stdout io.ReadCloser, taskID string) {
 	}
 }
 
-func logErrors(stderr io.ReadCloser) {
-	defer stderr.Close()
-	scanner := bufio.NewScanner(stderr)
-	for scanner.Scan() {
-		log.Printf("[YT-DLP ERROR] %s", scanner.Text())
-	}
-}
-
 func parseProgress(line string) float64 {
+	re := regexp.MustCompile(`(\d+\.\d+)%`)
+	matches := re.FindStringSubmatch(line)
+	if len(matches) > 1 {
+		progress, err := strconv.ParseFloat(matches[1], 64)
+		if err == nil {
+			return progress
+		}
+		log.Printf("Error parsing progress: %v", err)
+	}
 	return 0.0
 }

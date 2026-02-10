@@ -11,8 +11,8 @@ FROM alpine:latest
 
 RUN apk add --no-cache \
     yt-dlp \
-    ffmpeg \
     ca-certificates \
+    ffmpeg \
     bash
 
 RUN mkdir /app
